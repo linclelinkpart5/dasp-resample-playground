@@ -19,11 +19,16 @@ fn main() {
 
     let mut reader = Cursor::new(bytes);
 
-    let samples = std::iter::from_fn(move || {
-        reader.read_i32::<NativeEndian>().ok().map(|x| f32::from_sample(x))
+    let frames = std::iter::from_fn(move || {
+        let mut buf = [0i32; NUM_CHANNELS];
+
+        // We assume that the only error that occurs is when trying to read
+        // from the cursor when it is already empty.
+        reader.read_i32_into::<NativeEndian>(&mut buf).ok()?;
+        Some(Frame::map(buf, f32::from_sample))
     });
 
-    let signal = dasp_signal::from_interleaved_samples_iter::<_, [f32; NUM_CHANNELS]>(samples);
+    let signal = dasp_signal::from_iter(frames);
 
     let ring_buffer = Fixed::from([[0f32; NUM_CHANNELS]; 128]);
     let interpolator = Sinc::new(ring_buffer);
