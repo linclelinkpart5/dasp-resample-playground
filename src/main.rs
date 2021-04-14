@@ -29,7 +29,6 @@ fn main() {
     let interpolator = Sinc::new(ring_buffer);
 
     let interpolated_signal = signal.from_hz_to_hz(interpolator, 44100.0, 48000.0);
-    // let out_samples = interpolated_signal.into_interleaved_samples();
 
     let mut out_file = OpenOptions::new()
         .create(true)
@@ -40,7 +39,7 @@ fn main() {
 
     let mut num_clipped = 0;
     for frame in interpolated_signal.until_exhausted() {
-        let clipped_frame: [f32; NUM_CHANNELS] = frame.map(|sample| {
+        let clipped_frame: [f32; NUM_CHANNELS] = Frame::map(frame, |sample| {
             if sample > 1.0 {
                 num_clipped += 1;
                 1.0

@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 dasp_frame = { path = "../dasp/dasp_frame" }
-dasp_interpolate = { path = "../dasp/dasp_interpolate", features = ["sinc"] }
+dasp_interpolate = { path = "../dasp/dasp_interpolate", features = ["floor", "linear", "sinc"] }
 dasp_ring_buffer = { path = "../dasp/dasp_ring_buffer" }
 dasp_sample = { path = "../dasp/dasp_sample" }
 dasp_signal = { path = "../dasp/dasp_signal" }
