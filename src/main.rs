@@ -79,8 +79,43 @@ fn dasp_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iter
     output_signal.until_exhausted()
 }
 
+fn sampara_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iterator<Item = [i32; NUM_CHANNELS]> {
+    use sampara::{Frame, Sample, Signal};
+    use sampara::buffer::Fixed;
+    use sampara::interpolate::Sinc;
+
+    let frames = int_frames.map(|frame| Frame::apply(frame, f32::from_sample));
+    let signal = sampara::signal::from_frames(frames);
+
+    // Note that the buffer is passed directly to the interpolator!
+    let interpolator = Sinc::new(SINC_BUFFER);
+
+    let interpolated_signal = signal.interpolate(interpolator, 44100.0 / 48000.0);
+
+    let clipped_signal = interpolated_signal.map(|frame| {
+        let clipped_frame: [f32; NUM_CHANNELS] = Frame::apply(frame, |sample| {
+            if sample > 1.0 {
+                println!("Clipping detected: {}", sample);
+                1.0
+            } else if sample < -1.0 {
+                println!("Clipping detected: {}", sample);
+                -1.0
+            } else {
+                sample
+            }
+        });
+
+        clipped_frame
+    });
+
+    let output_signal = clipped_signal.map(|frame| Frame::apply(frame, i32::from_sample));
+
+    output_signal.into_iter()
+}
+
 fn main() {
-    let the_impl = dasp_impl;
+    // let the_impl = dasp_impl;
+    let the_impl = sampara_impl;
 
     let in_int_frames = read_int_frames();
     let out_int_frames = the_impl(in_int_frames);
