@@ -7,6 +7,9 @@ const NUM_CHANNELS: usize = 2;
 const SOURCE_PATH: &str = "/home/mark/source.raw";
 const TARGET_PATH: &str = "/home/mark/target.raw";
 
+const INPUT_RATE: f64 = 44100.0;
+const OUTPUT_RATE: f64 = 48000.0;
+
 const SINC_BUFFER: [[f32; NUM_CHANNELS]; 128] = [[0f32; NUM_CHANNELS]; 128];
 
 fn read_int_frames() -> impl Iterator<Item = [i32; NUM_CHANNELS]> {
@@ -56,7 +59,7 @@ fn dasp_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iter
     let ring_buffer = Fixed::from(SINC_BUFFER);
     let interpolator = Sinc::new(ring_buffer);
 
-    let interpolated_signal = signal.from_hz_to_hz(interpolator, 44100.0, 48000.0);
+    let interpolated_signal = signal.from_hz_to_hz(interpolator, INPUT_RATE, OUTPUT_RATE);
 
     let clipped_signal = interpolated_signal.map(|frame| {
         let clipped_frame: [f32; NUM_CHANNELS] = Frame::map(frame, |sample| {
@@ -81,7 +84,6 @@ fn dasp_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iter
 
 fn sampara_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iterator<Item = [i32; NUM_CHANNELS]> {
     use sampara::{Frame, Sample, Signal};
-    use sampara::buffer::Fixed;
     use sampara::interpolate::Sinc;
 
     let frames = int_frames.map(|frame| Frame::apply(frame, f32::from_sample));
@@ -90,7 +92,7 @@ fn sampara_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl I
     // Note that the buffer is passed directly to the interpolator!
     let interpolator = Sinc::new(SINC_BUFFER);
 
-    let interpolated_signal = signal.interpolate(interpolator, 44100.0 / 48000.0);
+    let interpolated_signal = signal.interpolate(interpolator, INPUT_RATE / OUTPUT_RATE);
 
     let clipped_signal = interpolated_signal.map(|frame| {
         let clipped_frame: [f32; NUM_CHANNELS] = Frame::apply(frame, |sample| {
