@@ -1,6 +1,8 @@
 use std::fs::OpenOptions;
 use std::io::Cursor;
+use std::str::FromStr;
 
+use clap::{AppSettings, Clap};
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 
 const NUM_CHANNELS: usize = 2;
@@ -11,6 +13,29 @@ const INPUT_RATE: f64 = 44100.0;
 const OUTPUT_RATE: f64 = 48000.0;
 
 const SINC_BUFFER: [[f32; NUM_CHANNELS]; 128] = [[0f32; NUM_CHANNELS]; 128];
+
+enum Engine {
+    Dasp,
+    Sampara,
+}
+
+impl FromStr for Engine {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "dasp" => Ok(Self::Dasp),
+            "sampara" => Ok(Self::Sampara),
+            _ => Err("unknown engine"),
+        }
+    }
+}
+
+#[derive(Clap)]
+#[clap(setting = AppSettings::ColoredHelp)]
+struct Opts {
+    engine: Engine,
+}
 
 fn read_int_frames() -> impl Iterator<Item = [i32; NUM_CHANNELS]> {
     let bytes = std::fs::read(SOURCE_PATH).unwrap();
@@ -46,7 +71,9 @@ fn write_int_frames(frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) {
     }
 }
 
-fn dasp_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iterator<Item = [i32; NUM_CHANNELS]> {
+fn dasp_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>)
+    -> impl Iterator<Item = [i32; NUM_CHANNELS]>
+{
     use dasp_frame::Frame;
     use dasp_sample::Sample;
     use dasp_signal::Signal;
@@ -82,7 +109,9 @@ fn dasp_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iter
     output_signal.until_exhausted()
 }
 
-fn sampara_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl Iterator<Item = [i32; NUM_CHANNELS]> {
+fn sampara_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>)
+    -> impl Iterator<Item = [i32; NUM_CHANNELS]>
+{
     use sampara::{Frame, Sample, Signal};
     use sampara::interpolate::Sinc;
 
@@ -116,10 +145,12 @@ fn sampara_impl(int_frames: impl Iterator<Item = [i32; NUM_CHANNELS]>) -> impl I
 }
 
 fn main() {
-    // let the_impl = dasp_impl;
-    let the_impl = sampara_impl;
+    let opts = Opts::parse();
 
     let in_int_frames = read_int_frames();
-    let out_int_frames = the_impl(in_int_frames);
-    write_int_frames(out_int_frames);
+
+    match opts.engine {
+        Engine::Dasp => write_int_frames(dasp_impl(in_int_frames)),
+        Engine::Sampara => write_int_frames(sampara_impl(in_int_frames)),
+    };
 }
