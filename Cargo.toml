@@ -13,5 +13,5 @@ dasp_interpolate = { path = "../dasp/dasp_interpolate", features = ["floor", "li
 dasp_ring_buffer = { path = "../dasp/dasp_ring_buffer" }
 dasp_sample = { path = "../dasp/dasp_sample" }
 dasp_signal = { path = "../dasp/dasp_signal" }
-sampara = { path = "../sampara", features = ["interpolate", "buffer"] }
+sampara = { path = "../sampara" }
 byteorder = "1.4"
